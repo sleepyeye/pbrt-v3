@@ -30,7 +30,15 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     "MinSizeRel" "RelWithDebInfo")
 endif()
 
-if(NOT IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/ext/openexr/OpenEXR")
+
+if(NOT IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/ext/Imath/cmake")
+  message(FATAL_ERROR "The Imath submodule directory is missing! "
+    "You probably did not clone the project with --recursive. It is possible to recover "
+    "by running \"git submodule update --init --recursive\"")
+endif()
+
+
+if(NOT IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/ext/openexr/cmake")
   message(FATAL_ERROR "The OpenEXR submodule directory is missing! "
     "You probably did not clone the project with --recursive. It is possible to recover "
     "by running \"git submodule update --init --recursive\"")
@@ -305,30 +313,18 @@ ENDIF()
 INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIRS})
 
 ###########################################################################
-# OpenEXR
+# OpenEXR and Imath
 
-SET(ILMBASE_NAMESPACE_VERSIONING OFF CACHE BOOL " " FORCE)
-SET(OPENEXR_NAMESPACE_VERSIONING OFF CACHE BOOL " " FORCE)
-SET(OPENEXR_BUILD_SHARED_LIBS    OFF CACHE BOOL " " FORCE)
-SET(ILMBASE_BUILD_SHARED_LIBS    OFF CACHE BOOL " " FORCE)
+SET(OPENEXR_INSTALL_EXAMPLES     OFF CACHE BOOL " " FORCE)
+SET(OPENEXR_IS_SUBPROJECT        TRUE CACHE BOOL " " FORCE)
+SET(OPENEXR_IS_SUBPROJECT        TRUE CACHE BOOL " " FORCE)
+SET(IMATH_IS_SUBPROJECT        TRUE CACHE BOOL " " FORCE)
 
+ADD_SUBDIRECTORY(src/ext/Imath)
 ADD_SUBDIRECTORY(src/ext/openexr)
 
-SET_PROPERTY(TARGET IexMath eLut toFloat b44ExpLogTable dwaLookups IlmThread Half Iex Imath IlmImf PROPERTY FOLDER "ext")
-
-INCLUDE_DIRECTORIES (
-  src/ext/openexr/IlmBase/Imath
-  src/ext/openexr/IlmBase/Half
-  src/ext/openexr/IlmBase/Iex
-  src/ext/openexr/OpenEXR/IlmImf
-  ${CMAKE_BINARY_DIR}/src/ext/openexr/IlmBase/config
-  ${CMAKE_BINARY_DIR}/src/ext/openexr/OpenEXR/config
-)
-IF(WIN32)
-  SET(OPENEXR_LIBS IlmImf Imath Half ${ZLIB_LIBRARY})
-ELSE()
-  SET(OPENEXR_LIBS IlmImf Imath Half)
-ENDIF()
+# SET_PROPERTY(TARGET Imath OpenEXR PROPERTY FOLDER "ext")
+SET(OPENEXR_LIBS Imath::Imath OpenEXR::OpenEXR)
 
 ###########################################################################
 # glog
@@ -490,6 +486,8 @@ ADD_LIBRARY ( pbrt STATIC
   ${PBRT_SOURCE}
   )
 ADD_SANITIZERS ( pbrt )
+target_link_libraries(pbrt PUBLIC
+  ${OPENEXR_LIBS})
 
 # A non-exhaustive but pretty representative set..
 # Note that we work-around shoddy c++11 support in MSVC2013
@@ -512,7 +510,6 @@ ENDIF()
 SET(ALL_PBRT_LIBS
   pbrt
   ${CMAKE_THREAD_LIBS_INIT}
-  ${OPENEXR_LIBS}
   glog
   Ptex_static
   ${ZLIB_LIBRARY}
